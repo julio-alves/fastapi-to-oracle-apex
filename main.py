@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Query
 from pydantic import BaseModel
-from typing import List
+from typing import Dict, Any
 import random
+import math
 
 app = FastAPI()
 
@@ -36,15 +37,27 @@ produtos_db = [
     for i in range(1, 1001)
 ]
 
-# Endpoint com paginação
-@app.get("/produtos", response_model=List[Produto])
-def listar_produtos(skip: int = Query(0, alias="pagina", ge=0), limit: int = Query(10, alias="tamanho", ge=1, le=100)):
+# Configuração fixa da paginação
+TAMANHO_PAGINA = 10
+
+# Endpoint simplificado
+@app.get("/produtos", response_model=Dict[str, Any])
+def listar_produtos(pagina: int = Query(1, ge=1)):
     """
     Retorna uma lista paginada de produtos.
-    - `pagina`: Índice inicial dos resultados (default=0)
-    - `tamanho`: Número de itens por página (default=10, máximo=100)
+    - `pagina`: Número da página (começa em 1)
     """
-    return produtos_db[skip: skip + limit]
+    total_produtos = len(produtos_db)
+    total_paginas = math.ceil(total_produtos / TAMANHO_PAGINA)
+
+    start = (pagina - 1) * TAMANHO_PAGINA
+    end = start + TAMANHO_PAGINA
+
+    return {
+        "pagina_atual": pagina,
+        "total_paginas": total_paginas,
+        "dados": produtos_db[start:end]
+    }
 
 # Para rodar no Render
 if __name__ == "__main__":
