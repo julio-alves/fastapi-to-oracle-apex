@@ -1,10 +1,17 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import Dict, Any
 import random
 import math
 
 app = FastAPI()
+
+# Inicializando o sistema de autenticação
+security = HTTPBasic()
+
+# Usuário e senha simples para autenticação
+USER_DB = {"admin": "senha123"}  # Usuário "admin" com senha "senha123"
 
 # Modelo de Produto
 class Produto(BaseModel):
@@ -40,11 +47,43 @@ produtos_db = [
 # Configuração fixa da paginação
 TAMANHO_PAGINA = 10
 
-# Endpoint simplificado
+# Função de verificação de autenticação
+def verificar_autenticacao(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = USER_DB.get(credentials.username)
+    if not correct_username or correct_username != credentials.password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha inválidos",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+# Endpoint público: Retorna lista de produtos com paginação
 @app.get("/produtos", response_model=Dict[str, Any])
 def listar_produtos(pagina: int = Query(1, ge=1)):
     """
     Retorna uma lista paginada de produtos.
+    - `pagina`: Número da página (começa em 1)
+    """
+    total_produtos = len(produtos_db)
+    total_paginas = math.ceil(total_produtos / TAMANHO_PAGINA)
+
+    start = (pagina - 1) * TAMANHO_PAGINA
+    end = start + TAMANHO_PAGINA
+
+    return {
+        "pagina_atual": pagina,
+        "total_paginas": total_paginas,
+        "dados": produtos_db[start:end]
+    }
+
+# Endpoint com autenticação básica: Exemplo de consulta de produtos protegida
+@app.get("/produtos-seguro", response_model=Dict[str, Any])
+def listar_produtos_segurado(
+    pagina: int = Query(1, ge=1),
+    credentials: HTTPBasicCredentials = Depends(verificar_autenticacao)
+):
+    """
+    Retorna uma lista paginada de produtos, mas este endpoint está protegido por autenticação básica.
     - `pagina`: Número da página (começa em 1)
     """
     total_produtos = len(produtos_db)
