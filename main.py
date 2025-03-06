@@ -76,7 +76,7 @@ def listar_produtos(pagina: int = Query(1, ge=1)):
         "dados": produtos_db[start:end]
     }
 
-# Endpoint com autenticação básica: Exemplo de consulta de produtos protegida
+# Endpoint com autenticação básica: Exemplo de consulta de produtos protegida com paginação
 @app.get("/produtos-seguro", response_model=Dict[str, Any])
 def listar_produtos_segurado(
     pagina: int = Query(1, ge=1),
